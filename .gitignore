@@ -30,3 +30,8 @@
 *.exe
 *.out
 *.app
+
+bin/
+obj/
+chatboard_build_log.html
+chatboard.depend
