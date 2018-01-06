@@ -110,26 +110,28 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  volatile uint32_t scanPin = 0, readPins;
+  /* volatile */ uint32_t scanPin = 0, readPins;
 
   while (1)
   {
   /* USER CODE END WHILE */
+
+  /* USER CODE BEGIN 3 */
     // LL_GPIO_TogglePin(GPIOA, LED_1_Pin | LED_2_Pin);
     // LL_mDelay(500);
 
-    LL_GPIO_SetOutputPin(GPIOA, GPIOA->ODR | ( 0x3ffu ^ (1 << scanPin)));
+    GPIOA->ODR &= 0xfffffc00u;
+    GPIOA->ODR |= 0x3ffu ^ (1 << scanPin);
+
     if ((readPins = LL_GPIO_ReadInputPort(GPIOB) & 0x3bu) != 0x3bu) {
 
       GPIOA->BSRR = ((uint32_t)LED_1_Pin << 16) | LED_2_Pin;
+      LL_mDelay(100);
     } else {
       GPIOA->BSRR = ((uint32_t)LED_2_Pin << 16) | LED_1_Pin;
     }
 
     if (++scanPin > 9) scanPin = 0;
-
-  /* USER CODE BEGIN 3 */
-
   }
   /* USER CODE END 3 */
 
@@ -357,13 +359,13 @@ static void MX_GPIO_Init(void)
   /**/
   GPIO_InitStruct.Pin = I_LANE_0_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_DOWN;
   LL_GPIO_Init(I_LANE_0_GPIO_Port, &GPIO_InitStruct);
 
   /**/
   GPIO_InitStruct.Pin = I_LANE_1_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_DOWN;
   LL_GPIO_Init(I_LANE_1_GPIO_Port, &GPIO_InitStruct);
 
   /**/
@@ -401,19 +403,19 @@ static void MX_GPIO_Init(void)
   /**/
   GPIO_InitStruct.Pin = I_LANE_2_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_DOWN;
   LL_GPIO_Init(I_LANE_2_GPIO_Port, &GPIO_InitStruct);
 
   /**/
   GPIO_InitStruct.Pin = I_LANE_3_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_DOWN;
   LL_GPIO_Init(I_LANE_3_GPIO_Port, &GPIO_InitStruct);
 
   /**/
   GPIO_InitStruct.Pin = I_LANE_4_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_DOWN;
   LL_GPIO_Init(I_LANE_4_GPIO_Port, &GPIO_InitStruct);
 
 }
