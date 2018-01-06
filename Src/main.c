@@ -73,6 +73,7 @@ static void MX_USART1_UART_Init(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+uint8_t keys[10 * 5];
 
 /* USER CODE END 0 */
 
@@ -111,6 +112,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   /* volatile */ uint32_t scanPin = 0, readPins;
+  for (size_t i=0; i<sizeof(keys);i++) keys[i] = 0;
 
   while (1)
   {
@@ -122,14 +124,29 @@ int main(void)
 
     GPIOA->ODR &= 0xfffffc00u;
     GPIOA->ODR |= 0x3ffu ^ (1 << scanPin);
+    readPins = LL_GPIO_ReadInputPort(GPIOB) & 0x3bu;
 
-    if ((readPins = LL_GPIO_ReadInputPort(GPIOB) & 0x3bu) != 0x3bu) {
+    for (size_t i=0; i<5;i++) {
+
+      uint8_t *key = keys + scanPin * 5 + i;
+      uint8_t pinVal = (i < 2) ?
+        ((readPins & (1 << i)) ? 1 : 0) : ((readPins & (1 << (i + 1))) ? 1 : 0);
+
+      if (*key != pinVal) {
+          LL_GPIO_TogglePin(GPIOA, LED_1_Pin | LED_2_Pin);
+          *key = pinVal;
+      }
+    }
+
+/*
+    if ((readPins) != 0x3bu) {
 
       GPIOA->BSRR = ((uint32_t)LED_1_Pin << 16) | LED_2_Pin;
       LL_mDelay(100);
     } else {
       GPIOA->BSRR = ((uint32_t)LED_2_Pin << 16) | LED_1_Pin;
     }
+    */
 
     if (++scanPin > 9) scanPin = 0;
   }
