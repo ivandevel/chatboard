@@ -1,3 +1,3 @@
 # chatboard
 Ericsson Chatboard USB conversion
-![PCB](img/CHA-666.jpg)
+![PCB](img/CHA-666.JPG)
