@@ -169,10 +169,28 @@ int main(void)
 
           /* DEBUG */ LL_GPIO_TogglePin(GPIOA, LED_1_Pin | LED_2_Pin);
           *key = pinVal;
-          if (!*key) {
-              /** TODO: check modifiers
-               */
-              addKeycode(keycodes[scanPin * 5 + i]);
+
+          switch(keycodes[scanPin * 5 + i]) {
+          case 0xe1: /* SHIFT */
+            /**
+                (bit 0 is L CTRL,
+                 bit 1 is L SHIFT,
+                 bit 2 is L ALT,
+                 bit 3 is L GUI (WIN),
+                 bit 4 is R CTRL,
+                 bit 5 is R SHIFT,
+                 bit 6 is R ALT,
+                 and bit 7 is R GUI (WIN)).
+             */
+            if (pinVal) report[0] &= ~2; else report[0] |= 2;
+            break;
+
+          default:
+            break;
+          }
+
+          if (!pinVal) {
+             addKeycode(keycodes[scanPin * 5 + i]);
           }
 
           keyChanges++;
@@ -180,10 +198,7 @@ int main(void)
     }
 
     if (keyChanges) {
-        /** TODO: send report
-         */
          if (USBD_HID_SendReport(&hUsbDeviceFS, report, sizeof(report)) == USBD_OK) {
-
          }
     }
 
