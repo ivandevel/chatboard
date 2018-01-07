@@ -52,7 +52,7 @@
 #include "usb_device.h"
 
 /* USER CODE BEGIN Includes */
-
+#include "usbd_hid.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -73,7 +73,36 @@ static void MX_USART1_UART_Init(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-uint8_t keys[10 * 5];
+static uint8_t keys[10 * 5];
+static const uint8_t keycodes[10 * 5] = {
+    0x00 /* WWW */,     0x1e /* 1 */,       0x14 /* Q */,       0x04 /* A */,       0xe1 /* SHIFT */,
+    0x00 /* ATT */,     0x1f /* 2 */,       0x1A /* W */,       0x16 /* S */,       0x1d /* Z */,
+    0x00 /* EML */,     0x20 /* 3 */,       0x08 /* E */,       0x07 /* D */,       0x1b /* X */,
+    0x00 /* SMS */,     0x21 /* 4 */,       0x15 /* R */,       0x09 /* F */,       0x06 /* C */,
+    0x2c /* Spacebar*/, 0x22 /* 5 */,       0x17 /* T */,       0x0a /* G */,       0x19 /* V */,
+    0x50 /* Left */,    0x23 /* 6 */,       0x1c /* Y */,       0x0b /* H */,       0x05 /* B */,
+    0x4f /* Right */,   0x24 /* 7 */,       0x18 /* U */,       0x0d /* J */,       0x11 /* N */,
+    0x00 /* PHB */,     0x25 /* 8 */,       0x0c /* I */,       0x0e /* K */,       0x10 /* M */,
+    0x28 /* YES */,     0x26 /* 9 */,       0x12 /* O */,       0x0f /* L */,       0x37 /* Dot */,
+    0x29 /* NO */,      0x27 /* 0 */,       0x13 /* P */,       0x2a /* Backspace */, 0x00 /* None */
+};
+
+static volatile uint8_t report[8];
+
+static inline void addKeycode(uint8_t keycode) {
+
+    for (size_t i=2; i<8; i++) {
+        if (!report[i]) {
+
+            report[i] = keycode;
+            return;
+        }
+    }
+}
+
+static inline void resetReport() {
+    for (size_t i=2; i<8; i++) report[i] = 0;
+}
 
 /* USER CODE END 0 */
 
@@ -114,6 +143,8 @@ int main(void)
   /* volatile */ uint32_t scanPin = 0, readPins;
   for (size_t i=0; i<sizeof(keys);i++) keys[i] = 0;
 
+  uint8_t keyChanges;
+
   while (1)
   {
   /* USER CODE END WHILE */
@@ -121,6 +152,8 @@ int main(void)
   /* USER CODE BEGIN 3 */
     // LL_GPIO_TogglePin(GPIOA, LED_1_Pin | LED_2_Pin);
     // LL_mDelay(500);
+    keyChanges = 0;
+    resetReport();
 
     GPIOA->ODR &= 0xfffffc00u;
     GPIOA->ODR |= 0x3ffu ^ (1 << scanPin);
@@ -133,20 +166,26 @@ int main(void)
         ((readPins & (1 << i)) ? 1 : 0) : ((readPins & (1 << (i + 1))) ? 1 : 0);
 
       if (*key != pinVal) {
-          LL_GPIO_TogglePin(GPIOA, LED_1_Pin | LED_2_Pin);
+
+          /* DEBUG */ LL_GPIO_TogglePin(GPIOA, LED_1_Pin | LED_2_Pin);
           *key = pinVal;
+          if (!*key) {
+              /** TODO: check modifiers
+               */
+              addKeycode(keycodes[scanPin * 5 + i]);
+          }
+
+          keyChanges++;
       }
     }
 
-/*
-    if ((readPins) != 0x3bu) {
+    if (keyChanges) {
+        /** TODO: send report
+         */
+         if (USBD_HID_SendReport(&hUsbDeviceFS, report, sizeof(report)) == USBD_OK) {
 
-      GPIOA->BSRR = ((uint32_t)LED_1_Pin << 16) | LED_2_Pin;
-      LL_mDelay(100);
-    } else {
-      GPIOA->BSRR = ((uint32_t)LED_2_Pin << 16) | LED_1_Pin;
+         }
     }
-    */
 
     if (++scanPin > 9) scanPin = 0;
   }
