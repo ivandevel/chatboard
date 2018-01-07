@@ -74,17 +74,35 @@ static void MX_USART1_UART_Init(void);
 
 /* USER CODE BEGIN 0 */
 static uint8_t keys[10 * 5];
-static const uint8_t keycodes[10 * 5] = {
-    0x00 /* WWW */,     0x1e /* 1 */,       0x14 /* Q */,       0x04 /* A */,       0xe1 /* SHIFT */,
-    0x00 /* ATT */,     0x1f /* 2 */,       0x1A /* W */,       0x16 /* S */,       0x1d /* Z */,
-    0x00 /* EML */,     0x20 /* 3 */,       0x08 /* E */,       0x07 /* D */,       0x1b /* X */,
-    0x00 /* SMS */,     0x21 /* 4 */,       0x15 /* R */,       0x09 /* F */,       0x06 /* C */,
+static uint8_t fnActive = 0;
+
+static const uint8_t keycodes[10 * 5 * 2] = {
+
+    /** LAYOUT 1
+     */
+    0xe0 /* WWW */,     0x1e /* 1 */,       0x14 /* Q */,       0x04 /* A */,       0xe1 /* SHIFT */,
+    0xff /* ATT */,     0x1f /* 2 */,       0x1A /* W */,       0x16 /* S */,       0x1d /* Z */,
+    0xe3 /* EML */,     0x20 /* 3 */,       0x08 /* E */,       0x07 /* D */,       0x1b /* X */,
+    0xe2 /* SMS */,     0x21 /* 4 */,       0x15 /* R */,       0x09 /* F */,       0x06 /* C */,
     0x2c /* Spacebar*/, 0x22 /* 5 */,       0x17 /* T */,       0x0a /* G */,       0x19 /* V */,
     0x50 /* Left */,    0x23 /* 6 */,       0x1c /* Y */,       0x0b /* H */,       0x05 /* B */,
     0x4f /* Right */,   0x24 /* 7 */,       0x18 /* U */,       0x0d /* J */,       0x11 /* N */,
-    0x00 /* PHB */,     0x25 /* 8 */,       0x0c /* I */,       0x0e /* K */,       0x10 /* M */,
+    0x2b /* PHB */,     0x25 /* 8 */,       0x0c /* I */,       0x0e /* K */,       0x10 /* M */,
     0x28 /* YES */,     0x26 /* 9 */,       0x12 /* O */,       0x0f /* L */,       0x37 /* Dot */,
-    0x29 /* NO */,      0x27 /* 0 */,       0x13 /* P */,       0x2a /* Backspace */, 0x00 /* None */
+    0x29 /* NO */,      0x27 /* 0 */,       0x13 /* P */,       0x2a /* Backspace */, 0x00 /* None */,
+
+    /** LAYOUT 2
+     */
+    0xe0 /* WWW */,     0x3a /* F1 */,      0x35 /* ~ */,       0x50 /* Left */,    0xe1 /* SHIFT */,
+    0xff /* ATT */,     0x3b /* F2 */,      0x52 /* Up */,      0x51 /* Down */,    0x31 /* | */,
+    0x44 /* F11 */,     0x3c /* F3 */,      0x08 /* E */,       0x4f /* Right */,   0x1b /* X */,
+    0x45 /* F12 */,     0x3d /* F4 */,      0x15 /* R */,       0x09 /* F */,       0x06 /* C */,
+    0x2c /* Spacebar*/, 0x3e /* F5 */,      0x17 /* T */,       0x0a /* G */,       0x19 /* V */,
+    0x52 /* Up */,      0x3f /* F6 */,      0x1c /* Y */,       0x48 /* Pause */,   0x4d /* End */,
+    0x51 /* Down */,    0x40 /* F7 */,      0x4a /* Home */,    0x33 /* ; */,       0x4e /* PgDn */,
+    0x49 /* Ins */,     0x41 /* F8 */,      0x4b /* PgUp */,    0x34 /* ' */,       0x46 /* PrtScr */,
+    0x2d /* Minus */,   0x42 /* F9 */,      0x2f /* [ */,       0x31 /* | */,       0x36 /* Comma */,
+    0x2e /* Plus */,    0x43 /* F10 */,     0x30 /* ] */,       0x4c /* Delete */,  0x00 /* None */
 };
 
 static volatile uint8_t report[8];
@@ -143,7 +161,8 @@ int main(void)
   /* volatile */ uint32_t scanPin = 0, readPins;
   for (size_t i=0; i<sizeof(keys);i++) keys[i] = 0;
 
-  uint8_t keyChanges;
+  uint8_t keyChanges = 0;
+  resetReport();
 
   while (1)
   {
@@ -152,9 +171,6 @@ int main(void)
   /* USER CODE BEGIN 3 */
     // LL_GPIO_TogglePin(GPIOA, LED_1_Pin | LED_2_Pin);
     // LL_mDelay(500);
-    keyChanges = 0;
-    resetReport();
-
     GPIOA->ODR &= 0xfffffc00u;
     GPIOA->ODR |= 0x3ffu ^ (1 << scanPin);
     readPins = LL_GPIO_ReadInputPort(GPIOB) & 0x3bu;
@@ -170,8 +186,7 @@ int main(void)
           /* DEBUG */ LL_GPIO_TogglePin(GPIOA, LED_1_Pin | LED_2_Pin);
           *key = pinVal;
 
-          switch(keycodes[scanPin * 5 + i]) {
-          case 0xe1: /* SHIFT */
+          switch(keycodes[scanPin * 5 + i + (5 * 10 * fnActive)]) {
             /**
                 (bit 0 is L CTRL,
                  bit 1 is L SHIFT,
@@ -182,7 +197,25 @@ int main(void)
                  bit 6 is R ALT,
                  and bit 7 is R GUI (WIN)).
              */
+
+          case 0xe0: /* WWW / Control */
+            if (pinVal) report[0] &= ~1; else report[0] |= 1;
+            break;
+
+          case 0xe1: /* SHIFT */
             if (pinVal) report[0] &= ~2; else report[0] |= 2;
+            break;
+
+          case 0xff: /* ATT / Fn */
+            fnActive = (pinVal) ? 0 : 1; /* second layout */
+            break;
+
+          case 0xe3: /* EML / GUI / Windows */
+            if (pinVal) report[0] &= ~8; else report[0] |= 8;
+            break;
+
+          case 0xe2: /* SMS / Alt */
+            if (pinVal) report[0] &= ~4; else report[0] |= 4;
             break;
 
           default:
@@ -190,19 +223,25 @@ int main(void)
           }
 
           if (!pinVal) {
-             addKeycode(keycodes[scanPin * 5 + i]);
+             addKeycode(keycodes[scanPin * 5 + i + (5 * 10 * fnActive)]);
           }
 
           keyChanges++;
       }
     }
 
-    if (keyChanges) {
+
+    if (++scanPin > 9) {
+
+      if (keyChanges) {
          if (USBD_HID_SendReport(&hUsbDeviceFS, report, sizeof(report)) == USBD_OK) {
          }
-    }
+      }
 
-    if (++scanPin > 9) scanPin = 0;
+      scanPin = 0;
+      keyChanges = 0;
+      resetReport();
+    }
   }
   /* USER CODE END 3 */
 
